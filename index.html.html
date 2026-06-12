@@ -1,0 +1,647 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Analisa Saham - Screening Fundamental</title>
+<style>
+  :root {
+    --bg: #F7F5F0;
+    --surface: #FFFFFF;
+    --border: #E2DED4;
+    --text: #2C2A26;
+    --text-secondary: #6F6A5E;
+    --text-tertiary: #A8A296;
+    --accent: #1F4E78;
+    --accent-light: #E6F1FB;
+    --good: #0F6E56;
+    --good-bg: #E1F5EE;
+    --warn: #854F0B;
+    --warn-bg: #FAEEDA;
+    --bad: #993C1D;
+    --bad-bg: #FAECE7;
+    --radius: 10px;
+    --radius-lg: 14px;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, "Segoe UI", Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+  }
+  .wrap {
+    max-width: 880px;
+    margin: 0 auto;
+    padding: 2rem 1.25rem 4rem;
+  }
+  header {
+    margin-bottom: 1.5rem;
+  }
+  header h1 {
+    font-size: 22px;
+    font-weight: 600;
+    margin: 0 0 4px;
+    letter-spacing: -0.01em;
+  }
+  header p {
+    font-size: 14px;
+    color: var(--text-secondary);
+    margin: 0;
+  }
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 1.25rem;
+    margin-bottom: 1.25rem;
+  }
+  .card h2 {
+    font-size: 15px;
+    font-weight: 600;
+    margin: 0 0 1rem;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 12px;
+  }
+  label {
+    display: block;
+    font-size: 12.5px;
+    color: var(--text-secondary);
+    margin-bottom: 4px;
+  }
+  input[type="text"], input[type="number"], select {
+    width: 100%;
+    padding: 8px 10px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-size: 14px;
+    background: var(--bg);
+    color: var(--text);
+    font-family: inherit;
+  }
+  select { cursor: pointer; }
+  input:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-light);
+  }
+  input[type="text"] { text-transform: uppercase; }
+
+  .score-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin: 1rem 0;
+  }
+  .score-box {
+    background: var(--bg);
+    border-radius: var(--radius);
+    padding: 0.9rem 1rem;
+    text-align: center;
+  }
+  .score-box .label {
+    font-size: 12.5px;
+    color: var(--text-secondary);
+    margin-bottom: 4px;
+  }
+  .score-box .value {
+    font-size: 22px;
+    font-weight: 600;
+  }
+
+  .check {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 12px;
+    border-radius: 8px;
+    font-size: 13.5px;
+    margin-bottom: 6px;
+  }
+  .check.pass { background: var(--good-bg); color: var(--good); }
+  .check.fail { background: var(--bad-bg); color: var(--bad); }
+  .check .icon { margin-right: 6px; }
+
+  button {
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 500;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--text);
+    padding: 9px 16px;
+    cursor: pointer;
+    transition: background 0.15s, transform 0.05s;
+  }
+  button:hover:not(:disabled) { background: var(--bg); }
+  button:active:not(:disabled) { transform: scale(0.98); }
+  button:disabled { opacity: 0.4; cursor: not-allowed; }
+  button.primary {
+    background: var(--accent);
+    color: white;
+    border-color: var(--accent);
+  }
+  button.primary:hover:not(:disabled) { background: #194067; }
+  button.primary:disabled { background: var(--border); border-color: var(--border); color: var(--text-tertiary); }
+
+  .btn-row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 1rem; }
+
+  .toast {
+    display: none;
+    background: var(--good-bg);
+    color: var(--good);
+    border-radius: 8px;
+    padding: 10px 14px;
+    font-size: 13.5px;
+    margin-top: 0.75rem;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+  }
+  th, td {
+    text-align: left;
+    padding: 8px 10px;
+    border-bottom: 1px solid var(--border);
+    white-space: nowrap;
+  }
+  th {
+    color: var(--text-secondary);
+    font-weight: 500;
+    font-size: 12px;
+  }
+  .table-wrap { overflow-x: auto; }
+  .badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 500;
+  }
+  .badge.layak { background: var(--good-bg); color: var(--good); }
+  .badge.watchlist { background: var(--warn-bg); color: var(--warn); }
+  .badge.hindari { background: var(--bad-bg); color: var(--bad); }
+  .badge.up { background: var(--good-bg); color: var(--good); }
+  .badge.down { background: var(--bad-bg); color: var(--bad); }
+
+  .empty {
+    color: var(--text-tertiary);
+    font-size: 13.5px;
+    text-align: center;
+    padding: 1.5rem 0;
+  }
+  .row-actions button {
+    padding: 4px 8px;
+    font-size: 12px;
+  }
+  .technical-inputs {
+    display: none;
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--border);
+  }
+  .technical-inputs.show { display: block; }
+  .hint {
+    font-size: 12px;
+    color: var(--text-tertiary);
+    margin: 6px 0 0;
+  }
+  .criteria-note {
+    font-size: 12.5px;
+    color: var(--text-secondary);
+    margin-top: 1rem;
+    padding-top: 0.75rem;
+    border-top: 1px solid var(--border);
+  }
+  .criteria-note ul { margin: 6px 0 0; padding-left: 1.2rem; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Screening fundamental &amp; watchlist saham</h1>
+    <p>Isi data fundamental, lihat skor otomatis, simpan saham yang layak untuk analisa teknikal lebih lanjut.</p>
+  </header>
+
+  <div class="card">
+    <h2>Koneksi Google Sheets</h2>
+    <label for="webappurl">URL Web App (dari Apps Script)</label>
+    <input type="text" id="webappurl" placeholder="https://script.google.com/macros/s/.../exec" style="text-transform:none;">
+    <p class="hint">Tempel URL deployment Apps Script di sini. URL akan disimpan otomatis di browser ini.</p>
+  </div>
+
+  <div class="card">
+    <h2>Input data saham</h2>
+    <div class="grid">
+      <div>
+        <label for="kode">Kode saham</label>
+        <input type="text" id="kode" value="BUMI" maxlength="10">
+      </div>
+      <div>
+        <label for="sektor">Sektor</label>
+        <select id="sektor">
+          <option value="umum">Umum</option>
+          <option value="perbankan">Perbankan</option>
+          <option value="minerba">Minerba (tambang)</option>
+          <option value="properti">Properti</option>
+          <option value="consumer">Consumer goods</option>
+          <option value="infrastruktur">Infrastruktur / utilitas</option>
+        </select>
+      </div>
+      <div>
+        <label for="roe">ROE (%)</label>
+        <input type="number" id="roe" value="4" step="0.1">
+      </div>
+      <div>
+        <label for="der">DER</label>
+        <input type="number" id="der" value="1.8" step="0.01">
+      </div>
+      <div>
+        <label for="per">PER</label>
+        <input type="number" id="per" value="25" step="0.1">
+      </div>
+      <div>
+        <label for="persec">PER sektor (rata-rata)</label>
+        <input type="number" id="persec" value="14" step="0.1">
+      </div>
+      <div>
+        <label for="growth">Pertumbuhan laba YoY (%)</label>
+        <input type="number" id="growth" value="-8" step="0.1">
+      </div>
+      <div>
+        <label for="pbv">PBV</label>
+        <input type="number" id="pbv" value="1.5" step="0.01">
+      </div>
+    </div>
+
+    <div class="score-row">
+      <div class="score-box">
+        <div class="label">Skor fundamental</div>
+        <div class="value" id="score">0/5</div>
+      </div>
+      <div class="score-box">
+        <div class="label">Status</div>
+        <div class="value" id="status">-</div>
+      </div>
+    </div>
+
+    <div id="checklist"></div>
+
+    <div class="technical-inputs" id="techInputs">
+      <div class="grid">
+        <div>
+          <label for="ma50">MA50 (opsional)</label>
+          <input type="number" id="ma50" placeholder="harga">
+        </div>
+        <div>
+          <label for="ma200">MA200 (opsional)</label>
+          <input type="number" id="ma200" placeholder="harga">
+        </div>
+        <div style="grid-column: span 2;">
+          <label for="catatan">Catatan / sinyal teknikal (opsional)</label>
+          <input type="text" id="catatan" placeholder="contoh: pullback ke support, volume mengecil" style="text-transform: none;">
+        </div>
+      </div>
+      <p class="hint">MA50 &gt; MA200 = uptrend. Diisi otomatis hitung tren saat disimpan.</p>
+    </div>
+
+    <div class="btn-row">
+      <button class="primary" id="savebtn" disabled>Simpan ke watchlist</button>
+    </div>
+    <div class="toast" id="toast"></div>
+    <p class="hint" id="syncStatus"></p>
+
+    <div class="criteria-note" id="criteriaNote"></div>
+  </div>
+
+  <div class="card">
+    <h2>Watchlist (saham layak teknikal)</h2>
+    <div class="table-wrap">
+      <table id="watchlistTable">
+        <thead>
+          <tr>
+            <th>Kode</th>
+            <th>Sektor</th>
+            <th>Skor</th>
+            <th>ROE</th>
+            <th>DER</th>
+            <th>PER</th>
+            <th>PER sektor</th>
+            <th>Growth</th>
+            <th>PBV</th>
+            <th>Tren</th>
+            <th>Catatan</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="watchlistBody"></tbody>
+      </table>
+      <div class="empty" id="emptyMsg">Belum ada saham di watchlist.</div>
+    </div>
+    <div class="btn-row">
+      <button id="exportBtn">Export JSON</button>
+      <button id="importBtn">Import JSON</button>
+      <input type="file" id="fileInput" accept=".json" style="display:none;">
+    </div>
+  </div>
+</div>
+
+<script>
+const STORAGE_KEY = 'watchlist_saham_data';
+const URL_KEY = 'watchlist_saham_webapp_url';
+let watchlist = [];
+
+const SECTOR_LABELS = {
+  umum: 'Umum',
+  perbankan: 'Perbankan',
+  minerba: 'Minerba (tambang)',
+  properti: 'Properti',
+  consumer: 'Consumer goods',
+  infrastruktur: 'Infrastruktur / utilitas'
+};
+
+// Setiap sektor punya threshold berbeda untuk ROE, DER, PBV, growth
+// karena karakteristik struktur modal & profitabilitas berbeda per industri
+const SECTOR_CRITERIA = {
+  umum: {
+    roeMin: 15, derMax: 1, pbvMax: 3, growthMin: 0,
+    note: 'Kriteria umum: cocok untuk sektor manufaktur, perdagangan, dan industri non-finansial pada umumnya.'
+  },
+  perbankan: {
+    roeMin: 12, derMax: null, pbvMax: 2.5, growthMin: 0,
+    note: 'Bank punya struktur permodalan unik (dana nasabah tercatat sebagai liabilitas), jadi DER tidak relevan dan diabaikan. Fokus ke ROE dan PBV.'
+  },
+  minerba: {
+    roeMin: 12, derMax: 1.2, pbvMax: 2, growthMin: -10,
+    note: 'Laba sektor tambang sangat dipengaruhi harga komoditas sehingga fluktuatif. Toleransi pertumbuhan laba negatif sedikit lebih luas, PBV dijaga rendah.'
+  },
+  properti: {
+    roeMin: 8, derMax: 1.5, pbvMax: 1.5, growthMin: -5,
+    note: 'Sektor properti umumnya punya DER lebih tinggi (pembiayaan proyek) dan ROE lebih rendah dibanding sektor lain, tapi sering trading di bawah nilai buku (PBV rendah).'
+  },
+  consumer: {
+    roeMin: 15, derMax: 1, pbvMax: 5, growthMin: 0,
+    note: 'Consumer goods sering punya brand value tinggi sehingga PBV wajar lebih tinggi. ROE dan pertumbuhan laba tetap jadi fokus utama.'
+  },
+  infrastruktur: {
+    roeMin: 8, derMax: 1.5, pbvMax: 2, growthMin: -5,
+    note: 'Sektor infrastruktur/utilitas padat modal (DER tinggi wajar) dengan ROE lebih moderat, tapi cash flow relatif stabil.'
+  }
+};
+
+function renderCriteriaNote(sektor) {
+  const c = SECTOR_CRITERIA[sektor];
+  const el = document.getElementById('criteriaNote');
+  const items = [];
+  items.push('ROE &gt; ' + c.roeMin + '%');
+  if (c.derMax !== null) items.push('DER &lt; ' + c.derMax);
+  items.push('PER &lt; PER sektor');
+  items.push('pertumbuhan laba &gt; ' + c.growthMin + '%');
+  items.push('PBV &lt; ' + c.pbvMax);
+  const maxScore = c.derMax !== null ? 5 : 4;
+  const layakMin = Math.ceil(maxScore * 0.8);
+  const watchMin = Math.ceil(maxScore * 0.4);
+  el.innerHTML =
+    'Kriteria skor untuk sektor ' + SECTOR_LABELS[sektor] + ' (0-' + maxScore + '): ' + items.join(', ') + '.' +
+    '<p class="hint" style="margin-top:6px;">' + c.note + '</p>' +
+    '<ul>' +
+      '<li>Skor ' + layakMin + '-' + maxScore + ' &rarr; Layak teknikal</li>' +
+      '<li>Skor ' + watchMin + '-' + (layakMin - 1) + ' &rarr; Watchlist</li>' +
+      '<li>Skor 0-' + (watchMin - 1) + ' &rarr; Hindari</li>' +
+    '</ul>';
+}
+
+function loadData() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) watchlist = JSON.parse(raw);
+  } catch (e) { watchlist = []; }
+  try {
+    const url = localStorage.getItem(URL_KEY);
+    if (url) document.getElementById('webappurl').value = url;
+  } catch (e) {}
+}
+
+document.getElementById('webappurl').addEventListener('input', (e) => {
+  try { localStorage.setItem(URL_KEY, e.target.value.trim()); } catch (err) {}
+});
+
+function saveData() {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(watchlist)); } catch (e) {}
+}
+
+function calc() {
+  const kode = document.getElementById('kode').value.trim().toUpperCase();
+  const sektor = document.getElementById('sektor').value;
+  const roe = parseFloat(document.getElementById('roe').value);
+  const der = parseFloat(document.getElementById('der').value);
+  const per = parseFloat(document.getElementById('per').value);
+  const persec = parseFloat(document.getElementById('persec').value);
+  const growth = parseFloat(document.getElementById('growth').value);
+  const pbv = parseFloat(document.getElementById('pbv').value);
+
+  const c = SECTOR_CRITERIA[sektor];
+  const checks = [
+    { label: 'ROE > ' + c.roeMin + '%', pass: roe > c.roeMin, detail: isFinite(roe) ? roe.toFixed(1) + '%' : '-' }
+  ];
+  if (c.derMax !== null) {
+    checks.push({ label: 'DER < ' + c.derMax, pass: der < c.derMax, detail: isFinite(der) ? der.toFixed(2) : '-' });
+  }
+  checks.push({ label: 'PER < PER sektor', pass: per < persec, detail: (isFinite(per) ? per.toFixed(1) : '-') + ' vs ' + (isFinite(persec) ? persec.toFixed(1) : '-') });
+  checks.push({ label: 'Pertumbuhan laba > ' + c.growthMin + '%', pass: growth > c.growthMin, detail: isFinite(growth) ? growth.toFixed(1) + '%' : '-' });
+  checks.push({ label: 'PBV < ' + c.pbvMax, pass: pbv < c.pbvMax, detail: isFinite(pbv) ? pbv.toFixed(2) : '-' });
+
+  const maxScore = checks.length;
+  const score = checks.reduce((acc, ch) => acc + (ch.pass ? 1 : 0), 0);
+  const layakMin = Math.ceil(maxScore * 0.8);
+  const watchMin = Math.ceil(maxScore * 0.4);
+
+  document.getElementById('score').textContent = score + '/' + maxScore;
+
+  let status, layak;
+  const statusEl = document.getElementById('status');
+  if (score >= layakMin) { status = 'Layak teknikal'; statusEl.style.color = 'var(--good)'; layak = true; }
+  else if (score >= watchMin) { status = 'Watchlist'; statusEl.style.color = 'var(--warn)'; layak = false; }
+  else { status = 'Hindari'; statusEl.style.color = 'var(--bad)'; layak = false; }
+  statusEl.textContent = status;
+
+  const checklistEl = document.getElementById('checklist');
+  checklistEl.innerHTML = '';
+  checks.forEach(ch => {
+    const row = document.createElement('div');
+    row.className = 'check ' + (ch.pass ? 'pass' : 'fail');
+    row.innerHTML = '<span><span class="icon">' + (ch.pass ? '\u2713' : '\u2717') + '</span>' + ch.label + '</span><span>' + ch.detail + '</span>';
+    checklistEl.appendChild(row);
+  });
+
+  document.getElementById('techInputs').classList.toggle('show', layak);
+
+  const saveBtn = document.getElementById('savebtn');
+  saveBtn.disabled = !(layak && kode);
+
+  renderCriteriaNote(sektor);
+
+  return { kode, sektor, score, maxScore, status, layak, roe, der, per, persec, growth, pbv };
+}
+
+function renderWatchlist() {
+  const body = document.getElementById('watchlistBody');
+  const empty = document.getElementById('emptyMsg');
+  body.innerHTML = '';
+
+  if (watchlist.length === 0) {
+    empty.style.display = 'block';
+    return;
+  }
+  empty.style.display = 'none';
+
+  watchlist.forEach((item, idx) => {
+    const tr = document.createElement('tr');
+
+    let trendBadge = '-';
+    if (item.ma50 && item.ma200) {
+      const up = item.ma50 > item.ma200;
+      trendBadge = '<span class="badge ' + (up ? 'up' : 'down') + '">' + (up ? 'Uptrend' : 'Downtrend') + '</span>';
+    }
+
+    tr.innerHTML =
+      '<td><strong>' + item.kode + '</strong></td>' +
+      '<td>' + (SECTOR_LABELS[item.sektor] || '-') + '</td>' +
+      '<td><span class="badge layak">' + item.score + '/' + (item.maxScore || 5) + '</span></td>' +
+      '<td>' + item.roe.toFixed(1) + '%</td>' +
+      '<td>' + item.der.toFixed(2) + '</td>' +
+      '<td>' + item.per.toFixed(1) + '</td>' +
+      '<td>' + item.persec.toFixed(1) + '</td>' +
+      '<td>' + item.growth.toFixed(1) + '%</td>' +
+      '<td>' + item.pbv.toFixed(2) + '</td>' +
+      '<td>' + trendBadge + '</td>' +
+      '<td>' + (item.catatan || '-') + '</td>' +
+      '<td class="row-actions"><button data-idx="' + idx + '">Hapus</button></td>';
+
+    body.appendChild(tr);
+  });
+
+  body.querySelectorAll('button[data-idx]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      watchlist.splice(parseInt(btn.dataset.idx), 1);
+      saveData();
+      renderWatchlist();
+    });
+  });
+}
+
+['kode','sektor','roe','der','per','persec','growth','pbv'].forEach(id => {
+  document.getElementById(id).addEventListener('input', calc);
+  document.getElementById(id).addEventListener('change', calc);
+});
+
+document.getElementById('savebtn').addEventListener('click', () => {
+  const data = calc();
+  if (!data.layak || !data.kode) return;
+
+  const ma50 = parseFloat(document.getElementById('ma50').value);
+  const ma200 = parseFloat(document.getElementById('ma200').value);
+  const catatan = document.getElementById('catatan').value.trim();
+
+  const entry = {
+    kode: data.kode, sektor: data.sektor, score: data.score, maxScore: data.maxScore, status: data.status,
+    roe: data.roe, der: data.der, per: data.per, persec: data.persec,
+    growth: data.growth, pbv: data.pbv,
+    ma50: isFinite(ma50) ? ma50 : null,
+    ma200: isFinite(ma200) ? ma200 : null,
+    catatan: catatan || null,
+    savedAt: new Date().toISOString()
+  };
+
+  const existingIdx = watchlist.findIndex(x => x.kode === entry.kode);
+  if (existingIdx >= 0) watchlist[existingIdx] = entry;
+  else watchlist.push(entry);
+
+  saveData();
+  renderWatchlist();
+
+  const toast = document.getElementById('toast');
+  toast.textContent = entry.kode + ' tersimpan ke watchlist (skor ' + entry.score + '/5)';
+  toast.style.display = 'block';
+  setTimeout(() => { toast.style.display = 'none'; }, 2500);
+
+  const webappUrl = document.getElementById('webappurl').value.trim();
+  const syncStatus = document.getElementById('syncStatus');
+  if (webappUrl) {
+    syncStatus.textContent = 'Mengirim ke Google Sheets...';
+    syncStatus.style.color = 'var(--text-secondary)';
+    fetch(webappUrl, {
+      method: 'POST',
+      mode: 'no-cors',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify(entry)
+    }).then(() => {
+      syncStatus.textContent = 'Terkirim ke Google Sheets (cek sheet untuk konfirmasi).';
+      syncStatus.style.color = 'var(--good)';
+    }).catch(() => {
+      syncStatus.textContent = 'Gagal kirim ke Google Sheets. Cek URL Web App atau koneksi internet.';
+      syncStatus.style.color = 'var(--bad)';
+    });
+  } else {
+    syncStatus.textContent = '';
+  }
+});
+
+document.getElementById('exportBtn').addEventListener('click', () => {
+  const blob = new Blob([JSON.stringify(watchlist, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'watchlist_saham_' + new Date().toISOString().slice(0,10) + '.json';
+  a.click();
+  URL.revokeObjectURL(url);
+});
+
+document.getElementById('importBtn').addEventListener('click', () => {
+  document.getElementById('fileInput').click();
+});
+
+document.getElementById('fileInput').addEventListener('change', (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (ev) => {
+    try {
+      const imported = JSON.parse(ev.target.result);
+      if (Array.isArray(imported)) {
+        imported.forEach(item => {
+          const idx = watchlist.findIndex(x => x.kode === item.kode);
+          if (idx >= 0) watchlist[idx] = item;
+          else watchlist.push(item);
+        });
+        saveData();
+        renderWatchlist();
+        const toast = document.getElementById('toast');
+        toast.textContent = 'Import berhasil: ' + imported.length + ' saham';
+        toast.style.display = 'block';
+        setTimeout(() => { toast.style.display = 'none'; }, 2500);
+      }
+    } catch (err) {
+      alert('File JSON tidak valid.');
+    }
+  };
+  reader.readAsText(file);
+  e.target.value = '';
+});
+
+loadData();
+renderWatchlist();
+calc();
+</script>
+</body>
+</html>
