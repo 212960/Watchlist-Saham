@@ -236,7 +236,7 @@
   <div class="card">
     <h2>Koneksi Google Sheets</h2>
     <label for="webappurl">URL Web App (dari Apps Script)</label>
-    <input type="text" id="webappurl" placeholder="https://script.google.com/macros/s/.../exec" style="text-transform:none;">
+    <input type="text" id="webappurl" value="https://script.google.com/macros/s/AKfycbxIderJKANk89Y3ApskGwMX1mw_Lf9EtCwWc64oXBs6SK6BhdKSrUuw7YBnd4krZOvL/exec" placeholder="https://script.google.com/macros/s/.../exec" style="text-transform:none;">
     <p class="hint">Tempel URL deployment Apps Script di sini. URL akan disimpan otomatis di browser ini.</p>
   </div>
 
@@ -571,9 +571,22 @@ document.getElementById('savebtn').addEventListener('click', () => {
   renderWatchlist();
 
   const toast = document.getElementById('toast');
-  toast.textContent = entry.kode + ' tersimpan ke watchlist (skor ' + entry.score + '/5)';
+  toast.textContent = entry.kode + ' tersimpan ke watchlist (skor ' + entry.score + '/' + entry.maxScore + ')';
   toast.style.display = 'block';
   setTimeout(() => { toast.style.display = 'none'; }, 2500);
+
+  document.getElementById('kode').value = '';
+  document.getElementById('sektor').value = 'umum';
+  document.getElementById('roe').value = '';
+  document.getElementById('der').value = '';
+  document.getElementById('per').value = '';
+  document.getElementById('persec').value = '';
+  document.getElementById('growth').value = '';
+  document.getElementById('pbv').value = '';
+  document.getElementById('ma50').value = '';
+  document.getElementById('ma200').value = '';
+  document.getElementById('catatan').value = '';
+  calc();
 
   const webappUrl = document.getElementById('webappurl').value.trim();
   const syncStatus = document.getElementById('syncStatus');
